@@ -16,6 +16,8 @@ This assumes:
 
 * You have a Greengrass core up and running
 
+If you need to set one up you can use my AMI and run on EC2. Check it out here https://github.com/paulhopkins11/aws-greengrass-core-ami
+
 ## Steps
 
 ### 1. Generate some certificates
