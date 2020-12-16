@@ -22,7 +22,7 @@ If you need to set one up you can use my AMI and run on EC2. Check it out here h
 
 ### 1. Generate some certificates
 
-```
+```zsh
 export DEVICE1_CERTIFICATE_ARN=$(aws iot create-keys-and-certificate \
     --profile <YOUR_AWS_PROFILE> \
     --region <YOUR_AWS_REGION> \
@@ -49,7 +49,7 @@ TODO - Core -> Settings -> Automatically detect and override connection informat
 TODO - Core -> Settings -> Local logs configuration
 
 Create the stack using:
-```
+```zsh
 aws cloudformation create-stack \
 --stack-name greengrass-stack \
 --template-body file://./greengrass_stack_cf.yaml \
@@ -64,7 +64,7 @@ ParameterKey=Device2CertificateArn,ParameterValue=$DEVICE2_CERTIFICATE_ARN
 
 Update the stack using:
 
-```
+```zsh
 aws cloudformation update-stack \
 --stack-name greengrass-stack \
 --template-body file://./greengrass_stack_cf.yaml \
@@ -89,7 +89,7 @@ NB. If running the Pub and Sub locally and the core on EC2 you need to manually 
 
 ### 4. Setup the python environment
 
-```
+```zsh
 python3 -m venv ~/virtualenv/greengrass
 source ~/virtualenv/greengrass/bin/activate 
 python3 -m pip install awsiotsdk
@@ -97,13 +97,13 @@ python3 -m pip install awsiotsdk
 
 ### 5. Download the sample code
 
-```
+```zsh
 wget https://raw.githubusercontent.com/aws/aws-iot-device-sdk-python-v2/main/samples/basic_discovery.py -P src/
 ```
 
 ### 6. Run the Subscriber
 
-```
+```zsh
 make sub -e region=<YOUR_AWS_REGION>
 ```
 
@@ -111,7 +111,7 @@ You should see this successfully discover
 
 ### 7. Run the Publisher
 
-```
+```zsh
 make pub -e region=<YOUR_AWS_REGION>
 ```
 
