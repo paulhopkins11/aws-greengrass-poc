@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS IoT Greengrass example template that creates a group version with a core,
+  device, function, logger, subscription, and resources.
+Parameters:
+  CoreCertificateArn:
+    Type: String
+  Device1CertificateArn:
+    Type: String
+  Device2CertificateArn:
+    Type: String
+  # LambdaVersionArn:
+  #   Type: String
+Resources:
+  # Policy to attach to the CoreCertificate
+  CoreCertificatePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - iot:Publish
+              - iot:Subscribe
+              - iot:Connect
+              - iot:Receive
+              - iot:GetThingShadow
+              - iot:UpdateThingShadow
+              - iot:DeleteThingShadow
+              - greengrass:*
+            Resource:
+              - "*"
+      PolicyName: CoreCertificatePolicy
+  CoreCertificatePolicyPrincipalAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName:
+        Ref: CoreCertificatePolicy
+      Principal: !Ref CoreCertificateArn
+  # Policy to attach to Device1
+  HelloWorldPublisherDevicePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - iot:Publish
+              - iot:Subscribe
+              - iot:Connect
+              - iot:Receive
+              - greengrass:*
+            Resource:
+              - "*"
+      PolicyName: HelloWorldPublisherDevicePolicy
+  HelloWorldPublisherDevicePolicyPrincipalAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName:
+        Ref: HelloWorldPublisherDevicePolicy
+      Principal: !Ref Device1CertificateArn
+
+  # Policy to attach to the Device2
+  HelloWorldSubscriberDevicePolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - iot:Publish
+              - iot:Subscribe
+              - iot:Connect
+              - iot:Receive
+              - greengrass:*
+            Resource:
+              - "*"
+      PolicyName: HelloWorldSubscriberDevicePolicy
+  HelloWorldSubscriberDevicePolicyPrincipalAttachment:
+    Type: AWS::IoT::PolicyPrincipalAttachment
+    Properties:
+      PolicyName:
+        Ref: HelloWorldSubscriberDevicePolicy
+      Principal: !Ref Device2CertificateArn
+
+  # Greengrass -> CORE
+  TestCore1:
+    Type: "AWS::IoT::Thing"
+    Properties:
+      ThingName: TestCore1
+  TestCoreDefinition:
+    Type: "AWS::Greengrass::CoreDefinition"
+    Properties:
+      Name: DemoTestCoreDefinition
+  TestCoreDefinitionVersion:
+    Type: "AWS::Greengrass::CoreDefinitionVersion"
+    Properties:
+      CoreDefinitionId: !Ref TestCoreDefinition
+      Cores:
+        - Id: TestCore1
+          CertificateArn: !Ref CoreCertificateArn
+          SyncShadow: "false"
+          ThingArn: !Join
+            - ":"
+            - - "arn:aws:iot"
+              - !Ref "AWS::Region"
+              - !Ref "AWS::AccountId"
+              - thing/TestCore1
+  # Greengrass -> DEVICE
+  HelloWorldPublisherDevice:
+    Type: "AWS::IoT::Thing"
+    Properties:
+      ThingName: HelloWorldPublisher
+  # HelloWorldPublisherDeviceDefinition:
+  #   Type: "AWS::Greengrass::DeviceDefinition"
+  #   Properties:
+  #     Name: HelloWorldPublisherDefinition
+  # HelloWorldPublisherDeviceDefinitionVersion:
+  #   Type: "AWS::Greengrass::DeviceDefinitionVersion"
+  #   Properties:
+  #     DeviceDefinitionId: !GetAtt
+  #       - HelloWorldPublisherDeviceDefinition
+  #       - Id
+  #     Devices:
+  #       - Id: HelloWorldPublisherDevice
+  #         CertificateArn: !Ref Device1CertificateArn
+  #         SyncShadow: "true"
+  #         ThingArn: !Join
+  #           - ":"
+  #           - - "arn:aws:iot"
+  #             - !Ref "AWS::Region"
+  #             - !Ref "AWS::AccountId"
+  #             - thing/HelloWorldPublisher
+  # Greengrass -> DEVICE
+  HelloWorldSubscriberDevice:
+    Type: "AWS::IoT::Thing"
+    Properties:
+      ThingName: HelloWorldSubscriber
+
+  HelloWorldDeviceDefinition:
+    Type: "AWS::Greengrass::DeviceDefinition"
+    Properties:
+      Name: HelloWorldDeviceDefinition
+  HelloWorldDeviceDefinitionVersion:
+    Type: "AWS::Greengrass::DeviceDefinitionVersion"
+    Properties:
+      DeviceDefinitionId: !GetAtt
+        - HelloWorldDeviceDefinition
+        - Id
+      Devices:
+        - Id: HelloWorldPublisherDevice
+          CertificateArn: !Ref Device1CertificateArn
+          SyncShadow: "true"
+          ThingArn: !Join
+            - ":"
+            - - "arn:aws:iot"
+              - !Ref "AWS::Region"
+              - !Ref "AWS::AccountId"
+              - thing/HelloWorldPublisher
+        - Id: HelloWorldSubscriberDevice
+          CertificateArn: !Ref Device2CertificateArn
+          SyncShadow: "true"
+          ThingArn: !Join
+            - ":"
+            - - "arn:aws:iot"
+              - !Ref "AWS::Region"
+              - !Ref "AWS::AccountId"
+              - thing/HelloWorldSubscriber
+
+  # TestFunctionDefinition:
+  #   Type: "AWS::Greengrass::FunctionDefinition"
+  #   Properties:
+  #     Name: DemoTestFunctionDefinition
+  # TestFunctionDefinitionVersion:
+  #   Type: "AWS::Greengrass::FunctionDefinitionVersion"
+  #   Properties:
+  #     FunctionDefinitionId: !GetAtt
+  #       - TestFunctionDefinition
+  #       - Id
+  #     DefaultConfig:
+  #       Execution:
+  #         IsolationMode: GreengrassContainer
+  #     Functions:
+  #       - Id: TestLambda1
+  #         FunctionArn: !Ref LambdaVersionArn
+  #         FunctionConfiguration:
+  #           Pinned: "true"
+  #           Executable: run.exe
+  #           ExecArgs: argument1
+  #           MemorySize: "512"
+  #           Timeout: "2000"
+  #           EncodingType: binary
+  #           Environment:
+  #             Variables:
+  #               variable1: value1
+  #             ResourceAccessPolicies:
+  #               - ResourceId: ResourceId1
+  #                 Permission: ro
+  #               - ResourceId: ResourceId2
+  #                 Permission: rw
+  #             AccessSysfs: "false"
+  #             Execution:
+  #               IsolationMode: GreengrassContainer
+  #               RunAs:
+  #                 Uid: "1"
+  #                 Gid: "10"
+
+  # TestLoggerDefinition:
+  #   Type: "AWS::Greengrass::LoggerDefinition"
+  #   Properties:
+  #     Name: DemoTestLoggerDefinition
+  # TestLoggerDefinitionVersion:
+  #   Type: "AWS::Greengrass::LoggerDefinitionVersion"
+  #   Properties:
+  #     LoggerDefinitionId: !Ref TestLoggerDefinition
+  #     Loggers:
+  #       - Id: TestLogger1
+  #         Type: AWSCloudWatch
+  #         Component: GreengrassSystem
+  #         Level: INFO
+
+  # TestResourceDefinition:
+  #   Type: "AWS::Greengrass::ResourceDefinition"
+  #   Properties:
+  #     Name: DemoTestResourceDefinition
+  # TestResourceDefinitionVersion:
+  #   Type: "AWS::Greengrass::ResourceDefinitionVersion"
+  #   Properties:
+  #     ResourceDefinitionId: !Ref TestResourceDefinition
+  #     Resources:
+  #       - Id: ResourceId1
+  #         Name: LocalDeviceResource
+  #         ResourceDataContainer:
+  #           LocalDeviceResourceData:
+  #             SourcePath: /dev/TestSourcePath1
+  #             GroupOwnerSetting:
+  #               AutoAddGroupOwner: "false"
+  #               GroupOwner: TestOwner
+  #       - Id: ResourceId2
+  #         Name: LocalVolumeResourceData
+  #         ResourceDataContainer:
+  #           LocalVolumeResourceData:
+  #             SourcePath: /dev/TestSourcePath2
+  #             DestinationPath: /volumes/TestDestinationPath2
+  #             GroupOwnerSetting:
+  #               AutoAddGroupOwner: "false"
+  #               GroupOwner: TestOwner
+  # Group - Subscription
+  TestSubscriptionDefinition:
+    Type: "AWS::Greengrass::SubscriptionDefinition"
+    Properties:
+      Name: HelloWorldSubscriptionDefinition
+  TestSubscriptionDefinitionVersion:
+    Type: "AWS::Greengrass::SubscriptionDefinitionVersion"
+    Properties:
+      SubscriptionDefinitionId: !Ref TestSubscriptionDefinition
+      Subscriptions:
+        - Id: HelloWorldSubscription
+          Source: !Join
+            - ":"
+            - - "arn:aws:iot"
+              - !Ref "AWS::Region"
+              - !Ref "AWS::AccountId"
+              - thing/HelloWorldPublisher
+          Subject: hello/world/pubsub2
+          Target: !Join
+            - ":"
+            - - "arn:aws:iot"
+              - !Ref "AWS::Region"
+              - !Ref "AWS::AccountId"
+              - thing/HelloWorldSubscriber
+
+  GreengrassGroupRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "greengrass.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+
+  # Greengrass -> GROUP
+  TestGroup:
+    Type: "AWS::Greengrass::Group"
+    Properties:
+      Name: DemoTestGroupNewName
+      RoleArn: !GetAtt
+        - GreengrassGroupRole
+        - Arn
+      InitialVersion:
+        CoreDefinitionVersionArn: !Ref TestCoreDefinitionVersion
+        DeviceDefinitionVersionArn: !Ref HelloWorldDeviceDefinitionVersion
+        # FunctionDefinitionVersionArn: !Ref TestFunctionDefinitionVersion
+        SubscriptionDefinitionVersionArn: !Ref TestSubscriptionDefinitionVersion
+        # LoggerDefinitionVersionArn: !Ref TestLoggerDefinitionVersion
+        # ResourceDefinitionVersionArn: !Ref TestResourceDefinitionVersion
+      # Tags:
+      #   KeyName0: value
+      #   KeyName1: value
+      #   KeyName2: value
+Outputs:
+  CommandToDeployGroup:
+    Value: !Join
+      - " "
+      - - groupVersion=$(cut -d'/' -f6 <<<
+        - !GetAtt
+          - TestGroup
+          - LatestVersionArn
+        - );
+        - aws --region
+        - !Ref "AWS::Region"
+        - greengrass create-deployment --group-id
+        - !Ref TestGroup
+        - "--deployment-type NewDeployment --group-version-id"
+        - $groupVersion
