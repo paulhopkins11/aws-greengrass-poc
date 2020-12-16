@@ -1,4 +1,14 @@
-# Covers how to set up greengrass POC from Cloudformation
+Covers how to set up a greengrass POC from Cloudformation
+
+## Summary
+
+At the end of this POC you will have a AWS Greengrass stack containing:
+
+* 1 x Core
+* 1 x Group
+* 2 x Devices
+
+You will have verified that you can send messages from one devices to another
 
 ## Assumptions
 
